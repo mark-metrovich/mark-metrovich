@@ -1,0 +1,274 @@
+---
+title: "126 HW 3"
+author: "Mark Metrovich"
+date: "2022-11-16"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+#1
+
+This question uses the *cereal* data set. Using the same variables as Assignment 2.
+
+```{r}
+Cereal <- read.table(file = "/home/jovyan/Mark_Metrovich/cereal.txt", header = TRUE) 
+str(Cereal)
+```
+
+Our goal is to study how *rating* is related to all other 8 variables.
+
+(a) Run a MLR model after removing observations 5, 21, and 58. Calculate the fitted response values and the residuals from the linear model mentioned above. Use *head* function to show the first 5 entries of the fitted response variables and residuals. 
+
+```{r}
+#to remove use df[-c(...),]
+cereal.1 <- Cereal[-c(5,21,58),]
+# Now we want to run the MLR
+lmod <- lm(rating~protein+fat+fiber+carbo+sugars+potass+vitamins+cups, data=cereal.1)
+summary(lmod)
+
+# We now want to isolate the residuals and fitted values
+head(fitted(lmod)) # first 5 fitted values
+head(residuals(lmod)) # first 5 residual values
+
+```
+
+(b) Use a graphical diagnostic approach to check if the random errors have a constant variance. Explain the methods you used and your conclusion 
+
+```{r}
+# to check if the random errors have a constant variance we will need to plot the residuals against the fitted values
+
+plot(lmod$fitted.values, lmod$residuals, xlab = "Fitted Values", ylab = "Residuals")
+abline(h=0, col = "red")
+```
+In this question I plotted the fitted values against the residuals to determine if the assumption of constant variance is met. By the spread of the points, we can assume that the assumption is met since there is no evident pattern. 
+
+
+(c) Use a graphical method to check if the random errors follow a normal distribution. What is your conclusion?
+
+```{r}
+# we will use a qqnorm plot to determine if the errors are approximately normal
+
+qqnorm(lmod$residuals)
+qqline(lmod$residuals, col = "red")
+```
+
+Based on the graph above, the errors do follow an approximately normal distribution. 
+
+
+(d) Run a *Shapiro-Wilkes* test to conclude if the errors follow a normal distribution. What is $H_{0}$? What is the p-value? What is your conclusion?
+
+```{r}
+shapiro.test(residuals(lmod))
+
+# since the p-value =0.1728 > 0.05 we fail to reject the null
+
+```
+
+The null hypothesis for the Shapiro-Wilkes test is that the errors do follow a normal distribution. Our p-value for this test was $0.1728$ , which is larger than our threshold of $0.05$ therefore we fail to reject the null and we see the errors do follow a normal distribution.
+
+
+(e) Plot successive pairs of residuals. Do you find serial correlation among observations?
+
+```{r}
+# using the acf plots
+acf(residuals(lmod), type = "partial", main = " ")
+```
+
+From the plot above, we do see some serial correlation among the observations.
+
+
+(f) Run a *Durbin-Watson* test to check if the random errors are uncorrelated. What is $H_{0}$? What is the p-value? What is the conclusion?
+
+```{r} 
+# first load the lmtest into your library
+library(lmtest)
+dwtest(lmod)
+# returns the p-value of 0.2041
+
+```
+
+The Durbin-Watson test has a null hypothesis that there is no correlation among the residuals, with a returned p-value of 0.2041, it is not enough to break the threshold we set at 0.05. Therefore, we fail to reject the null hypothesis, so we conclude that there is no relationship among the residuals for this model.
+
+
+(g). Compute the Hat Matrix in this data set. Verify that $\sum_{i=1}^{n} H_{ii} = p^{\text{*}} = p+1$.
+
+```{r}
+X <- as.matrix(cereal.1$rating, cereal.1$protein, cereal.1$fat, cereal.1$fiber, cereal.1$carbo, cereal.1$sugars, cereal.1$potass, cereal.1$vitamins, cereal.1$cups)
+H <- X %*% solve(t(X)%*%X)%*%t(X)
+diag<-data.frame(diag(H))
+hats<-data.frame(hatvalues(lmod))
+```
+
+
+
+(h) Check graphically if there is any high-leverage point. What is the criterion you used?
+
+```{r}
+n <- length(hatvalues(lmod))
+p <- dim(model.matrix(lmod))[2]
+dat <- data.frame(index=seq(n), leverage = hatvalues(lmod))
+plot(leverage~index, col ="white", data=dat, pch=NULL)
+text(leverage~index, labels = index, data = dat, cex = 0.9, font = 2)
+abline(h=(p)/n, col = "blue")
+abline(h=2*(p)/n, col = "red")
+abline(h=3*(p)/n, col = "orange")
+
+```
+
+
+By graphing the leverage points, we see there are some on the higher side, with one extremely high. The criteria we used is based on the concept that any point above $\frac{2p^{*}}{n}  \text{  or above  } \frac{3p^{*}}{n}$ is considered high leverage. We see the observations indexed as 2, 11, 65, and 68 are above the $\frac{2p^{*}}{n}$ threshold, so they are considered high and observation indexed at 4 is above the $\frac{3p^{*}}{n}$ threshold, so we identify that as extremely high leverage. 
+
+
+
+(i) Compute the standardized residuals. Without plotting, is there any outlier(s)? What is the criterion used?
+
+```{r}
+r <- rstandard(lmod)
+which(abs(r) >=3)
+# we see the value returned is 0
+```
+
+We use the *rstandard()* function to standardize the data and select which values of our model under an absolute value are greater than three. The rule of thumb in this course is that any value over three is considered an outlier, so since no values were returned for our model we conclude there are no outliers. 
+
+
+
+(j) Find the Cook's distance. How many observations in this dataset have a Cook's Distance that is greater than $\frac{4}{n}$?
+
+```{r}
+d<- cooks.distance(lmod)
+dat2 <- data.frame(index=seq(length(r)), distance=d)
+plot(distance~index, col="white", data=dat2, pch=NULL, ylim=c(0,0.3))
+text(distance~index, labels=index, data=dat2, cex=0.9, font=2)
+abline(h=4/n, col="red")
+which(d>(4/n))
+```
+
+From the plot above of the Cook's Distance, we see that there are several observations over our $\frac{4}{n}$ threshold. To see how many are above the limit, we also use the *which()* function to isolate those values, we see there are 7 total observations. 
+
+
+(k) Check whether the response needs a Box-Cox transformation. If so, what would be the form of the transformation?
+
+```{r}
+# first load the MASS package
+library(MASS)
+b.c<- boxcox(lmod, plotit=T, lambda= seq(-1,1,len=100))
+
+# we can find the most optimal lambda with the following 
+str(b.c)
+b.c.power <- b.c$x[which.max(b.c$y)]
+b.c.power # gives us 0.7575758
+```
+
+From the Box-Cox transformation test we are given the the optimal $\lambda$ for this model is $0.7575758$, this means our equation in terms of $y$ would be transformed to $y^{0.7575758}$.
+
+
+# 2. 
+
+A chemist studied the concentration of a solution over time and 15 identical solutions were prepared. Concentration will be the response variable and time the independent. Use the data set named *Solution* for the following. 
+```{r}
+#first, load the data set into your environment
+Solution <- read.table(file = "/home/jovyan/Mark_Metrovich/Solution.txt", header = TRUE)
+str(Solution)
+```
+
+(a) Plot the data along with the regression line
+
+```{r}
+plot(Solution, xlab= "Time", ylab="Concentration")
+abline(lm(concentration~time, data=Solution), col="red")
+```
+
+(b) Construct diagnostic plots and comment on your findings
+
+```{r}
+#create a linear model for the data set
+lmod1 <- lm(concentration~time, data=Solution)
+
+par(mfrow=c(2,2))
+plot(lmod1$fitted.values, lmod1$residuals)
+abline(h=0, col="red")
+
+plot(Solution$time, lmod1$residuals)
+abline(h=0, col="red")
+
+plot(Solution$concentration, lmod1$residuals)
+abline(h=0, col="red")
+
+qqnorm(lmod1$residuals)
+qqline(lmod1$residuals, col="red")
+```
+
+
+From the diagnostic plots above, we see that graphically there seems to be a non constant variance between the fitted values and residuals. There also seem to be patterns in the other plots, signifying we may need to transform the data. From the *qqnorm* plot, we see that just from the graph the data seems to not follow a normal distribution. 
+
+
+(c) Use the Box-Cox procedure to find an appropriate power transformation. 
+
+```{r}
+b.c1 <- boxcox(lmod1, plotit=T, lambda= seq(-1,1,len=100))
+
+# now to find the optimal transformation
+str(b.c1)
+b.c1.power <- b.c1$x[which.max(b.c1$y)]
+b.c1.power # -0.353535
+```
+
+The test above yields that an optimal transformation would be to raise our y variable to the power of $-0.353535$, or we could round to $0$ and make the transformation of $log(y)$. 
+
+
+(d) Use the transformation $y=log_{10}Y$ and obtain the estimated linear regression function for the transformed data. 
+
+```{r}
+new_solution<- log10(Solution)
+lmod2 <- lm(concentration~time, data=new_solution)
+summary(lmod2)
+```
+
+
+(e) Plot the transformed data and the estimated regression line from (d). Does the regression line appear to be a good fit for the data?
+
+```{r}
+plot(new_solution, xlab="time", ylab="concentration")
+abline(lm(concentration~time, data=new_solution), col="red")
+```
+
+From the plot above, we see that the linear regression line does not appear to be a good fit the data if transformed by $y=log_{10}Y$. 
+
+
+(f) Construct diagnostic plots for the fit in(d) and comment on your findings. 
+
+```{r}
+par(mfrow=c(2,2))
+plot(lmod2$fitted.values, lmod2$residuals)
+abline(h=0, col="red")
+
+plot(new_solution$time, lmod2$residuals)
+abline(h=0, col="red")
+
+plot(new_solution$concentration, lmod2$residuals)
+abline(h=0, col="red")
+
+qqnorm(lmod2$residuals)
+qqline(lmod2$residuals, col="red")
+```
+
+From the diagnostic plots we have created, we see that the fit is still not optimal. The *qqnorm* plot shows us the transformed data follows more closely to a normal distribution than the original data.
+
+
+(g) Provide point and interval estimation for the response in the original scale.
+
+```{r}
+# in the original scale of the data, use the Solution Dataset
+
+# note that the vector corresponding to time is
+Solution$time
+# therefore the index 1,2,3... etc refer to the relative values in the time vector.
+predict(lmod1)
+
+# now for the interval estimation
+predict(lmod1, interval="predict")
+```

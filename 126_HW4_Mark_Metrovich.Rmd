@@ -1,0 +1,291 @@
+---
+title: "126 HW 4"
+author: "Mark Metrovich"
+date: "2022-11-30"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r} 
+# First Install all the packages necessary for the assignment
+#install.packages("ISLR"); install.packages("glmnet"); 
+#install.packages("faraway")
+```
+
+# 1 
+This question uses the *Auto* dataset.
+
+```{r}
+
+library(ISLR)
+data(Auto)
+```
+
+(a) In this dataset, which predictors are qualitative and which are quantitative?
+```{r}
+Auto <- as.data.frame(Auto)
+```
+
+We can see from the variables that the qualitative variables are *name* and *origin*, referring to the name of the vehicle and the country of origin respectively. *Origin* is encoded with numbers to represent the different countries. The Quantitative variables are those that remain, being *mpg, cylinders, displacement, horsepower, weight, acceleration,* and *year.*
+
+
+(b) Explore the data and perform a descriptive analysis of each variable. Comment on your findings. 
+
+```{r}
+# first we will create boxplots to measure the spread of relevant variables
+par(mfrow=c(3,3))
+
+boxplot(Auto$mpg, main = "Variables in Auto Dataset", 
+        xlab= "Miles per Gallon(mpg)", col = "blue", border = "black", 
+        horizontal= TRUE)
+
+boxplot(Auto$cylinders, main = "Variables in Auto Dataset", 
+        xlab= "Number of Cylinders", col = "blue", border = "black", 
+        horizontal= TRUE)
+
+boxplot(Auto$displacement, main = "Variables in Auto Dataset", 
+        xlab= "Engine Displacement in Cubic Inches", col = "blue", 
+        border = "black", horizontal= TRUE)
+
+boxplot(Auto$horsepower, main = "Variables in Auto Dataset", 
+        xlab= "Engine Horsepower", col = "blue", border = "black", 
+        horizontal= TRUE)
+
+boxplot(Auto$weight, main = "Variables in Auto Dataset", 
+        xlab= "Weight of Car (lbs)", col = "blue", border = "black", 
+        horizontal= TRUE)
+
+boxplot(Auto$acceleration, main = "Variables in Auto Dataset", 
+        xlab= "Time of Acceleration (0 to 60 mph)", col = "blue", 
+        border = "black", horizontal= TRUE)
+
+boxplot(Auto$year, main = "Variables in Auto Dataset", 
+        xlab= "Model Year", col = "blue", border = "black", horizontal= TRUE)
+```
+From the box plots above, we see there are several outliers in the *acceleration* and *horsepower* predictors. We look further into those below.
+
+```{r}
+Auto[which(Auto$horsepower > 200), c("origin")] 
+# we see that all of the cars above 200 horsepower are American
+Auto[which(Auto$acceleration < 9), c("year")] 
+# we notice that cars below an acceleration of 9 were all made in 1970
+```
+
+```{r}
+origin <- table(Auto$origin)
+barplot(origin, ylim=c(0,300), xlab = "Country of Origin")
+legend("topright", legend = c("1-American", "2-European", "3-Japanese"))
+
+```
+
+Above we have provided a histogram to show the country of origin of all the cars in the data, we see that primarily, the cars represented in the data were made in the U.S. We will now show a grid scatterplot to view the relationships among the variables, particularly how they relate to *mpg* and also showing the Correlation matrix using the *cor()* function. We are ommitting the predictor *name* from both of these calculations. 
+
+
+```{r}
+auto_no_name <- data.frame(subset(Auto, select= -name))
+cor(auto_no_name, method="kendall", use="all.obs")
+pairs(mpg~cylinders+displacement+
+        horsepower+weight+
+        acceleration+year+origin,
+      data=Auto, cex=0.15)
+```
+
+
+
+(c) Fit a MLR to the data and use all data except for *name*. For each, comment on whether the null hypothesis that there is no linear relation between the predictor and *mpg* can be rejected.  
+
+```{r}
+
+lmod <- lm(mpg~cylinders+displacement+horsepower+
+             weight+acceleration+
+             year+origin,
+           data=Auto)
+summary(lmod)
+```
+We see from the summary above from the respective values that the predictors *displacement*, *weight*, *year*, and *origin* have statistically significant p-values, thus for these we can reject the null hypothesis. For the predictors *cylinders*, *horsepower*, and *acceleration*, we cannot since their p-values are not statistically significant under our threshold. 
+
+(d) Predict the mpg of a Japanese car with 3 cylinders, displacement of 100, horsepower of 85, weight of 3000, acceleration of 20, and year 1980. 
+```{r}
+# need to create a df with the values
+new_car<- data.frame(cylinders=3, displacement=100, horsepower=85,
+                         weight=3000, acceleration=20, year=80, origin =3)
+predict(lmod, newdata = new_car)
+
+```
+
+(e) On average, holding all other predictors fixed, what is the difference between the mpg of a Japanese car and that of a European car? 
+
+```{r}
+j_cars <- subset(Auto, origin == 3)
+e_cars <- subset(Auto, origin == 2)
+boxplot(j_cars$mpg,e_cars$mpg, col="blue", border = "black", 
+        xlab = "Japanese (left) and European (right)", 
+        ylab = "Miles per Gallon (mpg)")
+        
+```
+```{r}
+(sum(j_cars$mpg)/(length(j_cars$mpg))) -(sum(e_cars$mpg)/(length(e_cars$mpg)))
+```
+Only looking at the summaries of the predictors in the data frame *Auto*, we see that the mean Japanese mpg is 30.45 while the mean European mpg is 27.60. If we take the averages of both type of cars mpg and find the difference we find that it equals 2.847692. 
+
+
+(f) Fit a model to predict *mpg* using origin and horsepower, as well as an interaction between the two. Show the summaries of the fitted model and write out the fitted linear model.
+
+```{r}
+# the linear model without the interaction
+lmod_noint <- lm(mpg~origin+horsepower, 
+                           data=Auto)
+# the linear model with the interaction
+lmod_int<-lm(mpg~(origin*horsepower), data=Auto)
+
+summary(lmod_noint)
+lmod_noint$coefficients
+# this yields the equation mpg_hat = 33.3077 + 2.5774origin +  -.1333horsepower
+
+summary(lmod_int)
+lmod_int$coefficients
+# this yields the equation 
+# mpg_hat = 26.79089 + 7.87119origin + -0.05942horsepower + -0.06338 O:hp
+```
+
+We find from the above that the equation for the model with the interaction is 
+$$\hat{\text{mpg}} = 26.79089 + -7.8119\text{origin} + -0.05942\text{horsepower} + -0.06338\text{origin*horsepower}$$
+
+(g) Following part (f): On average how much does the mpg of a Japanese car change with the one-unit increase in horsepower?
+Using the equation found in part (f), we plug in 3 for the variable *origin* and 1 for the variable *horsepower* which yields: $$\hat{\text{mpg}} =  26.79089 + -7.8119*3 + -0.05942*1 + -0.06338(3*1)$$
+$$ \hat{\text{mpg}} = 3.10563 $$ So, we see that the average change in *mpg* of a Japanese car is 3.10563 per 1 unit increase in horsepower based on this model.
+
+(h) If we are fitting a polynomial regression with mpg as the response variable and weight as the predictor, what should the degree of that polynomial be?
+
+```{r}
+# need to find the box-cox transformation
+# first create the model
+lmod_weight <- lm(mpg~weight, data= Auto)
+summary(lmod_weight)
+
+library(MASS)
+b.c<- boxcox(lmod_weight, plotit=T, lambda= seq(-1,1,len=100))
+str(b.c)
+b.c.power <- b.c$x[which.max(b.c$y)]
+b.c.power
+# tells us the ideal lambda is -0.3333
+```
+
+The Box-Cox test above yields that if we are plotting a polynomial regression, the response should be raised to the power of $\lambda$ where $\lambda = -0.3333$.
+
+(i) Perform backwards selection (do not include name). What is the best model based on the AIC criterion? What are the predictor variables in the best model?
+
+
+```{r}
+# now use the models defined to perform the backward selection 
+# using stepAIC with k=2
+
+stepAIC(lmod, direction = "backward", k=2)
+```
+
+The step AIC test returned that the best model is $\hat{\text{mpg}} = -15.563492 + -0.506685\text{cylinders} + 0.019269\text{displacement} + -0.023895\text{horsepower} + -0.006218\text{weight} + 0.747516\text{year} + 1.428242\text{origin}$. The predictors in the best fitted model are *cylinders*, *displacement*, *horsepower*, *weight*, *year*, and *origin*.
+
+
+2. 
+
+Using the *fat* dataset from the *faraway* package. Use *siri* as the response and the others except *brozek* and *density* as potential predictors. Remove every tenth observation from the data as a test sample. Use remaining data as a training sample, building the following models:
+
+
+(a) Linear regression with all predictors
+```{r}
+#install.packages("faraway")
+library(faraway)
+data(fat)
+
+new_fat <- data.frame(fat[,-c(1,3)])
+test_sample <- new_fat[seq(1, nrow(new_fat), 10),]
+training_sample <- new_fat[-seq(1, nrow(new_fat), 10),]
+
+lmod_fat <- lm(siri~., data=training_sample)
+summary(lmod_fat)
+```
+
+(b) Linear regression with variables selected using AIC and BIC. Include 
+comparison plots and comments on the findings. 
+
+```{r}
+# first create the step-wise regression
+full_mod <- lmod_fat
+none_mod <- lm(siri~1, data=training_sample)
+```
+
+```{r include=FALSE}
+# now determine based on AIC, setting k=2
+stepAIC(none_mod, scope=list(upper=full_mod), direction="forward", k=2)
+# returns AIC of 216.07
+```
+
+```{r}
+# found using above code stepAIC(none_mod, scope=list(upper=full_mod), 
+#direction="forward", k=2)
+aic_mod <- lm(formula = siri ~ abdom + free + weight + forearm + adipos + 
+    thigh + chest + ankle + biceps + knee + height, data = new_fat)
+aic_mod
+summary(aic_mod)
+
+```
+
+```{r include=FALSE}
+# now using BIC method with k = log(length(new_fat$siri))
+stepAIC(none_mod, scope=list(upper=full_mod), direction="forward", 
+        k=log(length(new_fat$siri)))
+# returns BIC of 251.11
+```
+
+```{r}
+# found model using above code stepAIC(none_mod, 
+# scope=list(upper=full_mod), direction="forward", k=log(length(new_fat$siri)))
+bic_mod <- lm(formula = siri ~ abdom + free + weight + forearm + 
+                adipos + thigh + chest, data = new_fat)
+summary(bic_mod)
+
+```
+
+```{r}
+plot(aic_mod)
+plot(bic_mod)
+```
+
+We see from the plots above that the BIC model has a better fit for normality and lower cooke's distance than the AIC model. 
+
+
+(c) Ridge Regression
+
+```{r}
+library(MASS)
+par(mar=c(2,2,0.5,0.5))
+training_sample1 <- scale((training_sample), center= TRUE, scale = FALSE)
+training_sample1 <- as.data.frame(training_sample1)
+ridge_mod <- lm.ridge(siri~., training_sample1, lambda=seq(0,100,length=100))
+matplot(ridge_mod$lambda, coef(ridge_mod), 
+        xlab="lambda", ylab="beta hat", cex=0.8)
+
+variable <- which.min(ridge_mod$GCV); variable
+coef(ridge_mod)[variable,]
+```
+
+
+(d) Use the models you fit to predict the response in the test sample (include point and interval estimate). How do the models compare in terms of prediction (precision and accuracy)?
+
+
+```{r}
+predict(bic_mod, interval ="confidence", newdata = test_sample)
+predict(aic_mod, interval = "confidence", newdata= test_sample)
+predict(lmod_fat, interval="confidence", newdata = test_sample)
+
+predict(bic_mod, newdata= test_sample)
+predict(aic_mod, newdata = test_sample)
+predict(lmod_fat, newdata= test_sample)
+#predict(ridge_mod, newdata=test_sample) 
+# was unable to have any prediction for ridge Model 
+```
+
+We see from the returned predictions that the original linear model was accurate, but had low precision. The AIC model we found was accurate and had high precision. The BIC model we found was very precise, and had a higher accuracy than the AIC. The ridge model returned errors that I was unable to fix, but I would anticipate that the ridge regression would have higher precision with the same accuracy as the BIC model. 

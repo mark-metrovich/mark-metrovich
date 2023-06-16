@@ -1,0 +1,163 @@
+---
+title: "Quant Finance with R notes"
+author: "Mark Metrovich"
+date: "2023-03-24"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Section 1 
+#### Intro and Data Analysis  
+ begin by installing quantmod
+```{r include=FALSE}
+library(quantmod)
+library(PerformanceAnalytics)
+```
+  
+  Now we need to load data, by using a time series type, which is typically yahoo finance, but in this case we use functions 
+
+```{r}
+aapl <- getSymbols.yahoo("AAPL", from ="2017-2-1", auto.assign = FALSE) 
+# use from date as max past date, and auto.assign = false
+# xts stands for extensible time series object which will hold time series data 
+
+```
+
+Now that we have the complete set of data, lets extract the closing values 
+
+```{r}
+aaplClose <- aapl$AAPL.Close 
+# this is just an easier way to extract it, 
+#another way is to do the appl code but add [,6] at the end 
+
+```
+
+
+Now lets calculate some returns for apple
+
+```{r}
+aaplRets <- dailyReturn(aaplClose, type = "log") 
+# want to keep it standard and keep log returns throughout
+
+# sometimes the 0 value goes as NA, 
+#if that happens add na.omit(dailyReturn.....)
+
+```
+
+Now we make a simple plot
+```{r}
+chartSeries(aapl)
+```
+
+# Section 2 
+#### Portfolio Analysis  
+
+  
+  Focusing on the portfolio analytics package 
+
+We first create our string of tickers, and an evenly weighted portfolio, initiate the protprices as null since we will be adding to it. Then create a for loop to bind the columns of the closing price ([,4]) to the data needed. then check if any missing values
+```{r}
+tickers <- c("META", "AAPL", "AMZN", "NFLX")
+weights <- c(0.25,0.25,0.25,0.25)
+portfolioPrices <- NULL
+```
+
+Now we create the for loop to bind them
+```{r}
+for (ticker in tickers) {
+  portfolioPrices <- cbind(portfolioPrices,
+                           getSymbols.yahoo(ticker,
+                                            from="2016-01-03", 
+    periodicity = 'daily', auto.assign = FALSE)[,4])
+  
+  # us taking the close data
+}
+
+# check if missing data 
+
+colSums(is.na(portfolioPrices))
+```
+
+Now lets get our portfolio returns 
+
+```{r}
+portfolioRets <- na.omit(ROC(portfolioPrices))
+# use the ROC to Rate of CHange the portfolio prices
+?ROC
+```
+Now we must create the benchmark, typically this is the S&P 500 which every investor bases their goals on. As the saying goes to "beat the market" or "outperform the S&P"
+
+```{r}
+benchmarkPrices <- getSymbols.yahoo('^GSPC', from = '2016-01-03',
+                                    periodicity = 'daily',
+                                    auto.assign = FALSE)
+benchmarkRet <- na.omit(dailyReturn(benchmarkPrices$GSPC.Close, type = "log"))
+```
+
+
+Now we have portfolio returns and the benchmark returns, now we want to aggregate the returns using our weights to show the actual port returns
+
+```{r}
+portfolioReturn <- Return.portfolio(portfolioRets)
+# this is using geometric returns, base is TRUE
+```
+
+Now that we have all this stuff, we can put together some of our metrics for the portfolio like beta and alpha. This is all pretty much using the performance analytics
+
+
+```{r}
+print(CAPM.beta(portfolioReturn, benchmarkRet, .035/252))
+# the risk free rate in this case is some number over 252
+# 252 represents the number of trading days in a yr
+
+print(CAPM.jensenAlpha(portfolioReturn, benchmarkRet, 0.035/252))
+
+SharpeRatio(portfolioReturn, 0.035/252)
+# we want the STDDev Sharpe
+
+print(SharpeRatio(portfolioReturn, 0.035/252)[1,])
+
+```
+We see our beta for the portfolio is about 1.16 and our alpha is 0.0258, and sharpe of 0.02533
+
+
+Now we can show some returns annualized and calendar year
+
+
+```{r}
+table.AnnualizedReturns(portfolioReturn)
+table.CalendarReturns(portfolioReturn)
+
+```
+
+
+
+## Section 3 
+##### Portfolio Optimization  
+
+Now we will put together a portfolio and see how we can optimize the stuff 
+First load some of the necessary packages
+```{r include=FALSE}
+library(timeSeries)
+#library(fPortfolio)
+library(caTools)
+library(dplyr)
+library(PerformanceAnalytics)
+library(ggplot2)
+library(tidyquant)
+```
+
+
+
+Let's create a new portfolio for this example
+
+```{r}
+new_tick <- c("AAPL", "JNJ", "META", "TSLA", "ENB")
+
+# since we are using multiple stocks, use tidyquant 
+new_portfolio <- tq_get(new_tick, from = "2013-01-01")
+
+```

@@ -1,0 +1,144 @@
+---
+title: "126 Extra Credit"
+author: "Mark Metrovich"
+date: "2022-12-09"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+library("ISLR")
+library("MASS")
+library("glmnet")
+cars <- read.table(file = "cars.txt", head = T)
+```
+
+Our goal is to model the response *mpg* in terms of the rest of the variables (except *name*). 
+
+1. Partition the data into two sets (training and test). Remove every fifth observation from the set for a test sample.
+
+```{r}
+new_cars <- data.frame(cars[,-1])
+test_sample <- new_cars[seq(1, nrow(new_cars), 5),]
+training_data <- new_cars[-seq(1, nrow(new_cars), 5),]
+```
+
+
+2. For the next several parts, we will be using the *training_data* set to analyze the data. 
+
+```{r}
+par(mfrow=c(2,2))
+boxplot(training_data$mpg, col="blue", xlab= "Miles per Gallon (mpg)")
+boxplot(training_data$disp, col="blue", xlab="Displacement")
+boxplot(training_data$hp, col= "blue", xlab="Horsepower")
+boxplot(training_data$drat, col="blue", xlab ="Rear Axle Ratio")
+boxplot(training_data$wt, col="blue", xlab="Weight (1,000 lbs)")
+boxplot(training_data$qsec, col="blue", xlab="Quarter Mile Time")
+```
+
+Above, we have boxplots to display the spread of the predictors *mpg, disp, hp, drat, wt*, and *qsec*. As we can see there are no immediate outliers of concern and no negative values in any of the predictors as it would not be logical. 
+
+Below we will display bar plots to view the other predictors. 
+
+```{r}
+
+cylinders <- table(training_data$cyl)
+barplot(cylinders, ylim=c(0,15),
+         xlab="Number of Cylinders", ylab="Frequency")
+
+engine <-table(training_data$vs)
+barplot(engine, ylim=c(0,20), xlab="Type of Engine")
+legend("topright", legend = c("1- Straight", "0- V-Shaped"))
+
+transmission<- table(training_data$am)
+barplot(transmission, ylim=c(0,20), 
+                 xlab="Type of Transmission")
+legend("topright", legend = c("1-Manual, 0-Automatic"))
+
+gears <- table(training_data$gear)
+barplot(gears, ylim=c(0,15), xlab="Number of Forward Gears")
+
+carburetors<- table(training_data$carb)
+barplot(carburetors, ylim=c(0,15), xlab="Number of Carbuerators")
+```
+
+We look at the above predictors in a frequency plot to better understand how much they are represented in the data, one can see the qualitative variables *vs* for engine type and *am* for transmission type much easier than a box plot would allow. We will now view a pairs plot of all the variables without *name* to preview the correlation each predictor has to *mpg*. We will show the isolated correlation between *mpg* and the other predictors using the *cor()* function. 
+
+```{r}
+cor(training_data, method="kendall", use="all.obs")[,1]
+pairs(training_data, cex=0.3)
+```
+
+
+From all the above charts and data, we see that the predictors show moderate spread and that without any linear regression models, we see that the predictors *cyl, disp, hp, wt,* and *carb* all have negative correlation to the response *mpg*. 
+
+
+3. Perform a regression analysis and find the best model for the data, comment on your findings and describe your methods. 
+
+```{r}
+# first we will create a normal linear regression model 
+lmod <- lm(mpg~., data=training_data)
+summary(lmod)
+
+# for the normal linear regression we will look at the diagnostic plots to 
+# determine homeostacity, normality, and constant variance.
+
+plot(lmod$residuals~lmod$fitted.values)
+abline(h=0, col="red")
+
+# from the above residual vs fitted values plot, we can see there is no 
+# evident pattern in the points, so it is logical to assume a constant variance
+# in the errors.
+
+
+qqnorm(lmod$residuals)
+qqline(lmod$residuals, col="blue")
+
+# As seen above in the qq normal plot, there does seem to be some pull away from 
+# the normal line towards the end of the interval, but there also may just be not
+# enough data to conclude from the plot. 
+
+# we will perform a shapiro-wilkes test to see if the errors follow a normal
+# distribution
+shapiro.test(residuals(lmod))
+# returns a p-value of 0.663 which is above the threshold of 0.05, thus we cannot
+# reject the null hypothesis, so we conclude the errors follow a normal 
+#distribution
+
+acf(residuals(lmod), type = "partial", main = " ")
+# from the acf plot, we don't see any pattern in the plot, so we don't find any
+# correlation. 
+
+# we will now look to see if there are any transformations necessary via 
+# box-cox test
+
+
+library(MASS)
+b.c<- boxcox(lmod, plotit=T, lambda= seq(-1,1,len=100))
+
+# we can find the most optimal lambda with the following 
+str(b.c)
+b.c.power <- b.c$x[which.max(b.c$y)]
+b.c.power
+# returns 0.0707, so this would be the optimal power to raise the function to
+
+
+# now we will use backward selection to see the most efficient model 
+
+stepAIC(lmod, direction = "backward", k=2)
+# returns that the best formula is mpq~wt+qsec+am
+lmod2 <- lm(mpg~wt+qsec+am, data=training_data)
+summary(lmod2)
+
+```
+
+3. Use the new forumla on the test data
+
+```{r}
+# we use the predict() function on the test_data
+
+predict(lmod2, data=test_data)
+```

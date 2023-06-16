@@ -1,0 +1,196 @@
+---
+title: "126 HW2 Mark Metrovich"
+author: "Mark Metrovich"
+date: "Due date: 2022-10-31"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+require(datasets)
+
+```
+
+#1
+
+This question uses the *cereal* data set available in the Homework Assignment 2 on Canvas. We will only be utilizing the following variables : Rating, Protein, Fat, Fiber, Carbo, Sugars, Potass, Vitamins, and Cups.
+
+```{r}
+Cereal <- read.table(file = "/home/jovyan/Mark_Metrovich/cereal.txt", header = TRUE) 
+str(Cereal)
+```
+
+
+#### Our goal is to study how *rating* is related to all other 8 variables
+
+(a) Explore the data and perform descriptive analysis of each variable using any plots/statistics necessary. Were there any outliers? Is it reasonable to remove them? Why?
+
+We will show box plots for each variable. The variables include: - Rating: Quality Rating 
+- Protein: Amount of Protein
+- Fat: Amount of Fat
+- Fiber: Amount of Fiber
+- Carbo: Amount of Carbohydrates
+- Sugars: Amount of Sugar
+- Potass: Amount of Potassium
+- Vitamins: Amount of Vitmamins
+- Cups: Portion Size in Cups
+
+
+```{r, fig.height=3, fig.width=3}
+# create box plots for the variables of interest. 
+boxplot(Cereal$rating, main = "Variables in Cereal Dataset", xlab= "Rating", col = "blue", border = "black", horizontal= TRUE)
+
+boxplot(Cereal$protein, main = "Variables in Cereal Dataset", xlab= "Grams of Protein", col = "blue", border = "black", horizontal= TRUE)
+
+boxplot(Cereal$fat, main = "Variables in Cereal Dataset", xlab= "Grams of Fat", col = "blue", border = "black", horizontal= TRUE)
+
+boxplot(Cereal$fiber, main = "Variables in Cereal Dataset", xlab= "Fiber Content", col = "blue", border = "black", horizontal= TRUE)
+
+boxplot(Cereal$sugars, main = "Variables in Cereal Dataset", xlab= "Grams of Sugar", col = "blue", border = "black", horizontal= TRUE)
+
+boxplot(Cereal$potass, main = "Variables in Cereal Dataset", xlab= "Potassium Content", col = "blue", border = "black", horizontal= TRUE)
+
+boxplot(Cereal$vitamins, main = "Variables in Cereal Dataset", xlab= "Vitamin Content", col = "blue", border = "black", horizontal= TRUE)
+
+boxplot(Cereal$cups, main = "Variables in Cereal Dataset", xlab= "Cups per Serving", col = "blue", border = "black", horizontal= TRUE)
+
+```
+
+We see from the scatter plots that the majority of variables are spread consistently. The *Vitamins* variable has the two most extreme outliers, with the observations only having three values, where only two observations are not valued at 25. Because of this I believe it is reasonable to remove these observations. 
+```{r}
+# We will also create a pairwise scatterplot of the variables of interest
+
+pairs(rating~protein+fat+fiber+carbo+sugars+potass+vitamins+cups, data = Cereal, cex= 0.15)
+```
+
+
+(b) Using the lm() function, fit the MLR model with *rating* as the response and the other 8 variables as predictors. Display the summary output. 
+
+``` {r}
+lmod <- lm(rating ~ protein+fat+fiber+carbo+sugars+potass+vitamins+cups, data= Cereal)
+summary(lmod)
+```
+
+(c) Which predictors are statistically significant under the significance threshold of 0.01? 
+
+We note that any p-value less than 0.01 is considered statistically significant. Viewing the p-values from the summary:
+``` {r} 
+cbind(summary(lmod)$coefficients [, 4])
+```
+
+From these p-values, we find that the predictors that are statistically significant are: Protein, Fat, Fiber, Sugars, and Vitamins. 
+
+(d) What proportion of the total variation in the response is explained by the predictors?
+
+``` {r} 
+ summary(lmod)$r.squared
+# returns 0.9037
+```
+
+We conclude that an approximate 90.37% of the total variation in *Rating* is explained by the predictors.
+
+(e) What is the null hypothesis of the global F-Test? What is the p-value for the test? Do the 7 predictors explain a significant portion of the variation in the response?
+
+The null hypothesis of the global F-test is that none of the predictors explain a significant portion of the variation in the *Rating* variable. 
+
+We test this with the following code 
+
+```{r}
+mod_M <- lm(rating ~ protein+fat+fiber+carbo+sugars+potass+vitamins+cups, data= Cereal)
+mod_m <- lm(rating ~ 1, data = Cereal)
+anova(mod_m, mod_M)
+```
+
+From the Global F-Test, we find that the p-value is $2.2 (10^{-16})$ which is statistically significant. Therefore, at least one of the 7 predictors is helpful in explaining the variation in the response variable, *Rating*.
+
+(f) We want to test $H_{0} : \beta_{carbo} = 0$, use the t-value in the summary output to find the p-value associated with this test then verify that the p-value is identical to the one given in the summary.
+
+```{r}
+summary(lmod)$coefficients[5,3:4]
+t_value <- summary(lmod)$coefficients[5,3] # find the t-value associated with the variable carbo
+t_value 
+
+p_value <- pt(q = t_value, df = 68) *2
+p_value
+
+# compare the manual calculation of the p-value to the one found in the summary output
+mod_m2 <- lm(rating ~ protein+fat+fiber+sugars+potass+vitamins+cups, data= Cereal)
+mod_M2 <- lm(rating ~ protein+fat+fiber+carbo+sugars+potass+vitamins+cups, data= Cereal)
+anova(mod_m2, mod_M2)
+```
+
+We can see that the two p-values match, both are computed to be $0.9127$. 
+
+(g) We are interested in knowing if either *vitamins* or *potass* has any relation to the response *rating*. What is the corresponding null hypothesis of this statistical test? Construct an F-Test, report the found p-value, and your conclusion.
+
+We will let the null hypothesis be, $H_{0}: \beta_{vitamins} = \beta_{potass} = 0$, meaning that we assume these variables are unhelpful in explaining the variance of the response *rating*. We will construct the F-test as follows. 
+
+```{r} 
+# we want to construct a partial f-test without the variables vitamins and potass
+mod_m3 <- lm(rating ~ protein+fat+fiber+carbo+sugars+cups, data= Cereal)
+mod_M3 <- lm(rating ~ protein+fat+fiber+carbo+sugars+potass+vitamins+cups, data= Cereal)
+anova(mod_M3, mod_m3)
+# p value = 0.0004076
+```
+
+From the test we see that the p-value is equal to $0.0004076$ which is statistically significant, meaning we reject the null hypothesis and conclude that either *vitamins* or *potass* is significant to explain the variation of the response variable.
+
+(h) Use the summary output to construct a $99%$ confidence interval for $\beta_{protein}$. What is the interpretation for this interval. 
+
+```{r} 
+confint(lmod, level = 0.99)[2,]
+# This is the selected variable's confidence interval
+```
+
+We can interpret this interval as being able to reject the null hypothesis that $\beta_{protein} = 0$, since the interval does not contain 0, we cannot say that the variable does not explain some of the variation in the response variable *rating*.
+
+(i) What is the predicted *rating* for a ceral brand with the following coefficients: 
+
+```{r}
+vector_coeff <- cbind(summary(lmod)$coefficients[,1]) # the coefficients of each variable
+values <- rbind(1,3,5,2,13,6,60,25,0.8)
+combined <- cbind(vector_coeff, values)
+combined
+sum <- combined[,1] %*% combined[,2] # using matrix multiplication
+sum # matches the manual calculation
+
+```
+The predicted *rating* of the ceral with these certain values is $29.92808$. 
+
+(j) What is the $95%$ confidence interval for the observation in the previous part? What is the interpretation of the interval?
+
+```{r} 
+# create new df with all the new values
+new.data <- data.frame(protein=3, fat=5,fiber=2,carbo=13,sugars=6,potass=60,vitamins=25,cups=0.8)
+predict(lmod, new.data, interval = "predict")
+```
+
+From the found interval, we interpret this as the $95%$ confidence interval of the *rating* being between 19.21537 and 40.64079 with the previously stated variable values. 
+
+#2 
+Consider the MLR model with *p* predictors: $$y = X\beta + \epsilon \text{, } \epsilon \sim N(0, \sigma^{2}I_{n})$$
+
+We will let $\hat{\sigma}^{2} = \frac{SSR}{n-p^{\text{*}}}$ with $p^{\text{*}} = p + 1$. Use theoretical results from lectures to show $\hat{\sigma}^{2}$ is an unbiased estimator for $\sigma^{2}$. Find $V(\hat{\sigma}^{2})$.
+
+``` {r} 
+# to show it is unbiased, e(sig.hat^2) = sig^2
+# remember that SSR/ sig^2 follows chi with n-p^* df 
+
+```
+First we will show that$\hat{\sigma}^{2}$ is an unbiased estimator for $\sigma^{2}$.
+$$E(\hat{\sigma}^{2}) = E(\frac{SSR}{n-p^{\text{*}}})$$
+$$ = E(\frac{\sum_{i=1}^{n} (y_{i} - \hat{y}_{i})^{2}}{n-p^{\text{*}}})$$
+
+For the general linear regression problem, we denote $\hat{y}_{i} = HY$ where $H$ is the matrix $X(X^{t}X)^{-1}$. We will continue this proof using matrix notation, so $y_{i}$ will now be denoted $Y = \begin{bmatrix} y_{1} \\ y_{2} \\ . \\ . \\ . \\ y_{n} \end{bmatrix}$. Therefore our equation changes to $$E(\frac{(Y-HY)^{2}}{n-p^{\text{*}}})$$
+We know from lectures that 
+$$E((Y-HY)^{2}) = (n-p)\sigma^{2}$$ 
+However, for this problem our $p=p^{\text{*}}$ So, our actual solution to the expected value is $E((Y-HY)^{2}) = (n-p^{\text{*}})\sigma^{2}$ 
+Dividing that by $n-p^{\text{*}}$ leaves us with 
+$$\frac{(n-p^{\text{*}})\sigma^{2}}{n-p^{\text{*}}}$$
+$$= \sigma^{2}$$
+
+Which shows that $E(\hat{\sigma}^{2}) = \sigma^{2}$, thus proving it is an unbiased estimator.
+
+To find the Variance of $\hat{\sigma}^{2}$ we assume that $$\hat{\sigma}^{2} = \frac{SSR}{n-p^{\text{*}}} \sim \chi^{2}_{n-p^{\text{*}}}$$
+
+Since the variable follows a chi-squared distribution with $n-p^{\text{*}}$ degrees of freedom, the Variance of the distribution is $2k$ where $k$ is the degrees of freedom. Therefore, the $Var(\hat{\sigma}^{2})$ is $2(n-(p+1))$, or $2n-2p-2$.

@@ -1,0 +1,141 @@
+---
+title: "Homework 1"
+author: "Mark Metrovich"
+date: "2022-10-17"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, fig.align = "center")
+require (datasets)
+head(trees)
+```
+# 1. 
+### a. There are 31 Observations in the dataset 'trees' and there are 3 variables. The Variable names are Girth, Height, and Volume, which correspond to their order within the dataset.
+  
+### b.
+``` {r trees}
+pairs(log(trees), main = "Tree Information",
+         pch = 21, bg= c("red", "green3", "blue"))
+```
+
+### c. 
+``` {r}
+        cor(log(trees), use = "all.obs",     
+        method= "kendall") 
+```
+
+### d. There are no missing values in Trees.
+``` {r} 
+      sum(is.na(trees))
+```
+
+### e. 
+``` {r}
+      fit <- lm(Volume ~ Girth+Height, data = trees)
+      fit
+      summary(fit)
+```
+
+### f. The cefficient estimates from part (e) were -57.987, 4.7082, and 0.3393, respectively.
+``` {r}
+    x.matrix <- model.matrix( ~ Girth+Height, data= trees)
+    y.matrix <- trees$Volume
+    xtxi <- solve( t(x.matrix) %*% x.matrix)
+    beta_hat <- xtxi %*% t(x.matrix) %*% y.matrix
+    beta_hat
+    
+```    
+
+### g. 
+``` {r} 
+       data.frame(trees, y_hat = fitted(fit), e = residuals(fit))
+      
+```
+
+# 2. 
+## Consider the equation: $$y_i = \beta_0 + \beta_1 x_i + \epsilon_i$$
+
+## Part 1: $\beta_0 = 0$
+
+#### a. If $\beta_0$ is equal to 0, then we know the expected value of $Y$ is 0 when $x$ equals 0.\ The implication on the regression line is that is crosses through the point $(0,0)$.\ The regression line plot will be a best fitting line for the plot, passing through the origin of the graph. 
+
+#### b. If $\beta_0$ is equal to 0, we plus 0 into the equation that minimizes the equation.\ We are left with: $$ arg min SSR = \sum_{i=1}^{n} (yi - \hat{\beta_1}x_i)^{2}$$\ Which we then are set to take the derivative with respect to $\hat{\beta_1}$.\ 
+$$ 0= \frac{\partial}{\partial\hat{\beta_1}} \sum_{i=1}^{n} (y_i - \hat{\beta_1}x_i)^2\
+= \sum_{i=1}^{n} x_i(y_i - \hat{\beta_1})$$
+
+$$ 0 = \sum_{i=1}^{n} x_i (y_i - \bar{y} + \hat{\beta_1} \bar{x} - \hat{\beta_1}x_i)$$
+$$ 0 = \sum_{i=1}^{n} x_i(yi - \bar{y}) - \hat{\beta_1} \sum_{i=1}^{n} x_i (x_i-\bar{x})$$
+
+$$ 0 = \sum_{i=1}^{n} ((x_i - \bar{x}) + \bar{x}) (y_i - \bar{y}) - \hat{\beta_1} \sum_{i=1}^{n} ((x_i - \bar{x}) + \bar{x}) (x_i - \bar{x}) $$
+
+$$ 0 = \sum_{i=1}^{n} (x_i - \bar{x})(y_i - \bar{y}) + \bar{x}(y_i - \bar{y}) - \hat{\beta_1} \sum_{i=1}^{n} (x_i -\bar{x})(x_i - \bar{x}) + \bar{x}(x_i -\bar{x}) $$
+So we are left with the final estimation for $\hat{\beta_1}$: 
+
+$$ \hat{\beta_1} = \frac {\sum_{i=1}^{n} (x_i - \bar{x})(y_i - \bar{y})}{\sum_{i=1}^{n}(x_i-\bar{x})^{2}} $$
+
+
+#### c. With the lm() function, we can set use the offset option within the function to set the intercept to 0. 
+
+## Part 2. $\beta_1 = 0$
+
+#### d. If $\beta_1$ is equal to 0, then the data has no correlation. On the regression line, one would see that the line would be flat and only at the $y$ corrdinate of the intercept $\beta_0$, the plot would consist of scattered points that form no visible pattern. 
+
+#### e. If $\beta_1 = 0$ we can derive the LS estimate for $\beta_0$ similarly to 2 part c. From the equation of the SSR; $arg min SSR = \sum_{i=1} (y_i - \hat{\beta_0} - \hat{\beta_1}x_i)^2$. Now we simply set $\hat{\beta_1} = 0$ and derive with respect to $\hat{\beta_0}$.
+
+$$ 0 = \frac{\partial}{\partial\hat{\beta_0}} \sum_{i=1}^{n} (y_i - \hat{\beta_0})^{2} $$
+$$ 0 = \sum_{i=1}^{n} (y_i - \hat{\beta_0})$$ 
+$$ 0 = n\bar{y} - n\hat{\beta_o} $$
+So we are left with the final estimation: 
+
+$$ \hat{\beta_0} = \bar{y} $$
+f. Using the lm() function in R, we can use the offset argument to set $\hat{\beta_0}$ as $\bar{y}$. 
+
+
+# 3 
+## Consider the simple Linear Regression Model: $$y_i = \beta_0 + \beta_1x_i + \epsilon_i$$
+
+#### a. 
+### Recall that $\hat{\beta} = (X^{T}X)^{-1} X^{T} y$
+
+#### First, we write the vector $y$ and the matrix $X$ for the simple regression model and also the estimator $\hat{\beta}$ in matrix form. 
+
+
+$$ \hat{\beta} = (X^{T}X)^{-1} X^{T} y$$ 
+
+$$ \hat {\beta} = \begin{bmatrix} \sum x_{1}^{2} & \sum x_1 x_2 \\ \sum x_2 x_1 & \sum x_2^{2}\\ \end{bmatrix}^{-1} \begin{bmatrix} \sum x_1 x_k \\ \sum x_2 y \\ \end{bmatrix}$$
+
+Now that we have established that, we again want to minimize the SSR by using 
+
+$$ arg min \sum_{i=1}^{n} \hat{\epsilon_i}^2 = \hat{\epsilon}^{T} \hat{\epsilon}$$
+$$ = (y- X \hat{\beta})^{T} (y-X\hat{\beta})$$
+##Then we differentiate with respect to $\hat{\beta}$ in matrix form 
+
+$$ \frac{\partial}{\partial{\hat{\beta}}} (\begin{bmatrix} \sum y_1 \\ \sum y_2 \\ \end{bmatrix} - \begin{bmatrix} 1 & \sum x_{k1} \\ 1 & \sum x_{k2} \\ \end{bmatrix} \begin{bmatrix} \sum x_{1}^{2} & \sum x_1 x_2 \\ \sum x_2 x_1 & \sum x_2^{2}\\ \end{bmatrix}^{-1} \begin{bmatrix} \sum x_1 x_k \\ \sum x_2 y \\ \end{bmatrix}) ^{T} (\begin{bmatrix} \sum y_1 \\ \sum y_2 \\ \end{bmatrix} - \begin{bmatrix} 1 & \sum x_{k1} \\ 1 & \sum x_{k2} \\ \end{bmatrix} \begin{bmatrix} \sum x_{1}^{2} & \sum x_1 x_2 \\ \sum x_2 x_1 & \sum x_2^{2}\\ \end{bmatrix}^{-1} \begin{bmatrix} \sum x_1 x_k \\ \sum x_2 y \\ \end{bmatrix}) $$ 
+
+$$ = \frac{\partial}{\partial{\hat{\beta}}} (\begin{bmatrix} \sum y_1 \\ \sum y_2 \\ \end{bmatrix}^{T} \begin{bmatrix} \sum y_1 \\ \sum y_2 \\ \end{bmatrix} - 
+\begin{bmatrix} \sum y_1 \\ \sum y_2 \\ \end{bmatrix}^{T}\begin{bmatrix} 1 & \sum x_{k1} \\ 1 & \sum x_{k2} \\ \end{bmatrix} \begin{bmatrix} \sum x_{1}^{2} & \sum x_1 x_2 \\ \sum x_2 x_1 & \sum x_2^{2}\\ \end{bmatrix} \begin{bmatrix} \sum x_1 x_k \\ \sum x_2 y \\ \end{bmatrix}
+- \begin{bmatrix} \sum x_{1}^{2} & \sum x_1 x_2 \\ \sum x_2 x_1 & \sum x_2^{2}\\ \end{bmatrix} \begin{bmatrix} \sum x_1 x_k \\ \sum x_2 y \\ \end{bmatrix}^{T}\begin{bmatrix} 1 & \sum x_{k1} \\ 1 & \sum x_{k2} \\ \end{bmatrix}^{T}\begin{bmatrix} \sum y_1 \\ \sum y_2 \\ \end{bmatrix} 
++ \begin{bmatrix} \sum x_{1}^{2} & \sum x_1 x_2 \\ \sum x_2 x_1 & \sum x_2^{2}\\ \end{bmatrix} \begin{bmatrix} \sum x_1 x_k \\ \sum x_2 y \\ \end{bmatrix}^{T}\begin{bmatrix} 1 & \sum x_{k1} \\ 1 & \sum x_{k2} \\ \end{bmatrix} \begin{bmatrix} \sum x_{1}^{2} & \sum x_1 x_2 \\ \sum x_2 x_1 & \sum x_2^{2}\\ \end{bmatrix} \begin{bmatrix} \sum x_1 x_k \\ \sum x_2 y \\ \end{bmatrix}) $$
+
+
+$$ = -\begin{bmatrix} \sum y_1 \\ \sum y_2 \\ \end{bmatrix}^{T}\begin{bmatrix} 1 & \sum x_{k1} \\ 1 & \sum x_{k2} \\ \end{bmatrix} - \begin{bmatrix} \sum y_1 \\ \sum y_2 \\ \end{bmatrix}^{T}\begin{bmatrix} 1 & \sum x_{k1} \\ 1 & \sum x_{k2} \\ \end{bmatrix} + 2 \begin{bmatrix} \sum x_{1}^{2} & \sum x_1 x_2 \\ \sum x_2 x_1 & \sum x_2^{2}\\ \end{bmatrix} \begin{bmatrix} \sum x_1 x_k \\ \sum x_2 y \\ \end{bmatrix}^{T}\begin{bmatrix} 1 & \sum x_{k1} \\ 1 & \sum x_{k2} \\ \end{bmatrix} \begin{bmatrix} \sum x_{1}^{2} & \sum x_1 x_2 \\ \sum x_2 x_1 & \sum x_2^{2}\\ \end{bmatrix}$$
+$$ = -2 \begin{bmatrix} \sum y_1 \\ \sum y_2 \\ \end{bmatrix}^{T}\begin{bmatrix} 1 & \sum x_{k1} \\ 1 & \sum x_{k2} \\ \end{bmatrix} + 2 \begin{bmatrix} \sum x_{1}^{2} & \sum x_1 x_2 \\ \sum x_2 x_1 & \sum x_2^{2}\\ \end{bmatrix} \begin{bmatrix} \sum x_1 x_k \\ \sum x_2 y \\ \end{bmatrix}^{T}\begin{bmatrix} 1 & \sum x_{k1} \\ 1 & \sum x_{k2} \\ \end{bmatrix} \begin{bmatrix} \sum x_{1}^{2} & \sum x_1 x_2 \\ \sum x_2 x_1 & \sum x_2^{2}\\ \end{bmatrix}$$ 
+
+
+This implies that $$X^{T} X \hat{\beta} = X^{T}y $$ 
+or in matrix form: 
+
+$$ \begin{bmatrix} \sum y_1 \\ \sum y_2 \\ \end{bmatrix}^{T}\begin{bmatrix} \sum y_1 \\ \sum y_2 \\ \end{bmatrix}\begin{bmatrix} \sum x_{1}^{2} & \sum x_1 x_2 \\ \sum x_2 x_1 & \sum x_2^{2}\\ \end{bmatrix}^{-1} \begin{bmatrix} \sum x_1 x_k \\ \sum x_2 y \\ \end{bmatrix} = \begin{bmatrix} 1 & \sum x_{k1} \\ 1 & \sum x_{k2} \\ \end{bmatrix}^{T}\begin{bmatrix} \sum y_1 \\ \sum y_2 \\ \end{bmatrix} $$ 
+
+Provided that $X^{T} X$ is invertible: 
+
+$$ \hat{\beta} = (X^{T}X)^{-1} X^{T} y$$ 
+or, in matrix form: 
+
+$$ (\begin{bmatrix} \sum x_1 x_k \\ \sum x_2 y \\ \end{bmatrix}^{T}\begin{bmatrix} \sum x_1 x_k \\ \sum x_2 y \\ \end{bmatrix})^{-1} \begin{bmatrix} \sum x_1 x_k \\ \sum x_2 y \\ \end{bmatrix}^{T} \begin{bmatrix} \sum y_1 \\ \sum y_2 \\ \end{bmatrix}
+$$ 
+
+Therefore we have solved for an estimator of $\hat{\beta}$. 
+
+####b. 
